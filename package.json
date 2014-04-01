@@ -5,7 +5,7 @@
 , "author" : "Max Ogden <max@maxogden.com> goga <gogarin@gmail.com>"
 , "repository" :
   { "type" : "git"
-  , "url" : ""http://github.com/Crotery/node-mdb.git"
+  , "url" : "http://github.com/Crotery/node-mdb.git"
   }
 , "bugs" :
   { "url" : "http://github.com/Crotery/node-mdb/issues" }
