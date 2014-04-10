@@ -88,5 +88,3 @@ Mdb.prototype.tables = function (cb) {
 module.exports = function (data) {
     return new Mdb(data)
 }
-
-module.exports.Mdb = Mdb
