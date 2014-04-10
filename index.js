@@ -61,6 +61,76 @@ Mdb.prototype.queryTable = function (table, columns, onRow, onDone) {
         if (onDone) onDone(code);
     });
 }
+
+Mdb.prototype.queryTableSql = function (sql_statement, columns, onRow, onDone) {
+    var delimeter = '@@';
+    var lastStringDone = true;
+    var cells = {};
+
+    var echo = spawn('echo', [sql_statement]);
+    var mdb_sql = spawn('mdb-sql', ['-HFp', '-d' + delimeter, this.file]);
+
+    echo.stdout.on('data', function (data) {
+        mdb_sql.stdin.write(data);
+    });
+
+    echo.on('close', function (code) {
+        mdb_sql.stdin.end();
+    });
+
+    var byline_stream = byline(mdb_sql.stdout);
+    byline_stream.on('data', function (line) {
+        var row = line.toString().split(delimeter);
+
+        if (lastStringDone)
+        {
+            cells = {};
+
+            if (row.length > columns.length)
+                throw Error('Неверное число колонок в запросе');
+
+            if (row.length < columns.length)
+                lastStringDone = false;
+
+            for (var j = 0; j < row.length; j++) {
+                var name = columns[j];
+                cells[name] = row[j];
+            }
+        }
+        else
+        {
+            var cellsLength = Object.keys(cells).length;
+            if (row.length + cellsLength > columns.length + 1)
+                throw Error('Неверное число колонок при переносе строки');
+
+            for (var j = 0; j < row.length; j++) {
+                var name = columns[j + cellsLength - 1];
+                if (j == 0)
+                    cells[name] += row[j];
+                else{
+                    cells[name] = row[j];
+                }
+            }
+
+            if (Object.keys(cells).length == columns.length) {
+                lastStringDone = true;
+            }
+
+        }
+        if (lastStringDone)
+            onRow(cells);
+    });
+
+    mdb_sql.stderr.on('data', function (data) {
+        console.log('mdb_sql stderr: ' + data);
+        //mdb_sql.stdout.end();
+    });
+
+    mdb_sql.on('close', function (code) {
+        if (onDone) onDone(code);
+    });
+}
+
 Mdb.prototype.toSQL = function (table, cb) {
     var cmd = spawn('mdb-export', ['-I -R ;\r\n', this.file, table])
     cmd.stdout.pipe(
@@ -88,3 +158,5 @@ Mdb.prototype.tables = function (cb) {
 module.exports = function (data) {
     return new Mdb(data)
 }
+
+module.exports.Mdb = Mdb
